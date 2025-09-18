@@ -82,6 +82,7 @@ public class NamesrvStartup {
         final NamesrvConfig namesrvConfig = new NamesrvConfig();
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
         nettyServerConfig.setListenPort(9876);
+        // 解析启动-c参数
         if (commandLine.hasOption('c')) {
             String file = commandLine.getOptionValue('c');
             if (file != null) {
@@ -97,11 +98,12 @@ public class NamesrvStartup {
                 in.close();
             }
         }
-
+        // 解析启动-p参数；直接在启动类参数中送入 -p 就可以打印这个NameServer的所有的参数信息（不过NameServer会自动终止），说明这个-p是一个测试参数。
         if (commandLine.hasOption('p')) {
             InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_CONSOLE_NAME);
             MixAll.printObjectProperties(console, namesrvConfig);
             MixAll.printObjectProperties(console, nettyServerConfig);
+            // 直接退出了
             System.exit(0);
         }
 

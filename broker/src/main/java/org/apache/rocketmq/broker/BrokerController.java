@@ -238,24 +238,36 @@ public class BrokerController {
         return queryThreadPoolQueue;
     }
 
+    /**
+     * 初始化BrokerController
+     *
+     * @return 初始化是否成功
+     * @throws CloneNotSupportedException 如果克隆失败，则抛出异常
+     */
     public boolean initialize() throws CloneNotSupportedException {
+        // 加载Broker中的主题信息  json
         boolean result = this.topicConfigManager.load();
-
+        // 加载消费进度
         result = result && this.consumerOffsetManager.load();
+        // 加载订阅消息
         result = result && this.subscriptionGroupManager.load();
+        // 加载消费者过滤信息
         result = result && this.consumerFilterManager.load();
 
         if (result) {
             try {
+                // 创建消息存储管理组件
                 this.messageStore =
                     new DefaultMessageStore(this.messageStoreConfig, this.brokerStatsManager, this.messageArrivingListener,
                         this.brokerConfig);
+                // 如果开启了多副本机制，会为集群节点选主器添加roleChangeHandler事件处理器，即节点发送变更后的事件处理器。
                 if (messageStoreConfig.isEnableDLegerCommitLog()) {
                     DLedgerRoleChangeHandler roleChangeHandler = new DLedgerRoleChangeHandler(this, (DefaultMessageStore) messageStore);
                     ((DLedgerCommitLog)((DefaultMessageStore) messageStore).getCommitLog()).getdLedgerServer().getdLedgerLeaderElector().addRoleChangeHandler(roleChangeHandler);
                 }
+                // broker的统计组件
                 this.brokerStats = new BrokerStats((DefaultMessageStore) this.messageStore);
-                //load plugin
+                // load plugin
                 MessageStorePluginContext context = new MessageStorePluginContext(messageStoreConfig, brokerStatsManager, messageArrivingListener, brokerConfig);
                 this.messageStore = MessageStoreFactory.build(context, this.messageStore);
                 this.messageStore.getDispatcherList().addFirst(new CommitLogDispatcherCalcBitMap(this.brokerConfig, this.consumerFilterManager));
@@ -264,14 +276,17 @@ public class BrokerController {
                 log.error("Failed to initialize", e);
             }
         }
-
+        // 消息存储管理组件启动（（包含零拷贝-MMAP技术）
         result = result && this.messageStore.load();
 
         if (result) {
+            // 创建netty server 监听端口10911（BrokerStartup-createBrokerController方法里面配置）
             this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
             NettyServerConfig fastConfig = (NettyServerConfig) this.nettyServerConfig.clone();
+            //fastConfig可以立即为VIP通道或优速通，在RocketMQ 4.5.1之后，10909端口vipChannelEnabled默认为了false）
             fastConfig.setListenPort(nettyServerConfig.getListenPort() - 2);
             this.fastRemotingServer = new NettyRemotingServer(fastConfig, this.clientHousekeepingService);
+            // 创建专门处理消息发送的线程池
             this.sendMessageExecutor = new BrokerFixedThreadPoolExecutor(
                 this.brokerConfig.getSendMessageThreadPoolNums(),
                 this.brokerConfig.getSendMessageThreadPoolNums(),
@@ -324,6 +339,7 @@ public class BrokerController {
                 this.clientManagerThreadPoolQueue,
                 new ThreadFactoryImpl("ClientManageThread_"));
 
+            // 创建心跳处理的线程池
             this.heartbeatExecutor = new BrokerFixedThreadPoolExecutor(
                 this.brokerConfig.getHeartbeatThreadPoolNums(),
                 this.brokerConfig.getHeartbeatThreadPoolNums(),
@@ -343,11 +359,13 @@ public class BrokerController {
             this.consumerManageExecutor =
                 Executors.newFixedThreadPool(this.brokerConfig.getConsumerManageThreadPoolNums(), new ThreadFactoryImpl(
                     "ConsumerManageThread_"));
-
+            // 注册各种处理消息请求
             this.registerProcessor();
 
+            // 各种后台定时任务（持久化配置文件）
             final long initialDelay = UtilAll.computeNextMorningTimeMillis() - System.currentTimeMillis();
             final long period = 1000 * 60 * 60 * 24;
+            // 检查broker的状态
             this.scheduledExecutorService.scheduleAtFixedRate(() -> {
                 try {
                     BrokerController.this.getBrokerStats().record();

@@ -74,18 +74,18 @@ public class NamesrvController {
     }
 
     public boolean initialize() {
-
+        //记载kv配置
         this.kvConfigManager.load();
-
+        // 创建NettyServer网络处理对象
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
-
+        // 创建NRS的线程池，核心线程数默认为8，
         this.remotingExecutor =
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
 
         this.registerProcessor();
-
+        // 开启定时任务：每隔10S扫描一次不活跃的Broker进行移除
         this.scheduledExecutorService.scheduleAtFixedRate(NamesrvController.this.routeInfoManager::scanNotActiveBroker, 5, 10, TimeUnit.SECONDS);
-
+        // 开启定时任务：每隔10Min打印一次KV配置
         this.scheduledExecutorService.scheduleAtFixedRate(NamesrvController.this.kvConfigManager::printAllPeriodically, 1, 10, TimeUnit.MINUTES);
 
         if (TlsSystemConfig.tlsMode != TlsMode.DISABLED) {
@@ -141,6 +141,7 @@ public class NamesrvController {
     }
 
     public void start() throws Exception {
+        // 启动NRS组件
         this.remotingServer.start();
 
         if (this.fileWatchService != null) {

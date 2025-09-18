@@ -25,8 +25,13 @@ import java.util.Random;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
 
+/**
+ * broker数据
+ */
 public class BrokerData implements Comparable<BrokerData> {
+    // 集群名称
     private String cluster;
+    // broker名称
     private String brokerName;
     private HashMap<Long/* brokerId */, String/* broker address */> brokerAddrs;
 
@@ -36,6 +41,13 @@ public class BrokerData implements Comparable<BrokerData> {
 
     }
 
+    /**
+     * BrokerData 构造函数
+     *
+     * @param cluster    消息队列集群名称
+     * @param brokerName  Broker 名称
+     * @param brokerAddrs Broker 地址映射，Key 为 Broker 的唯一标识（如 Broker ID），Value 为 Broker 的地址
+     */
     public BrokerData(String cluster, String brokerName, HashMap<Long, String> brokerAddrs) {
         this.cluster = cluster;
         this.brokerName = brokerName;

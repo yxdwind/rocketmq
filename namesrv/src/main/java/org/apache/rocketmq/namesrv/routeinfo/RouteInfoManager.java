@@ -53,11 +53,17 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
 public class RouteInfoManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
+    // 读写锁，控制下各个map在并发读写下的安全性
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    // topic 队列信息,key为topic，value为map<key-brokerName,value-queueData>
     private final HashMap<String/* topic */, Map<String /* brokerName */ , QueueData>> topicQueueTable;
+    // broker信息，key为broker地址，value为该broker的broker信息
     private final HashMap<String/* brokerName */, BrokerData> brokerAddrTable;
+    // broker集群信息，key为集群名称，value为该集群下所有的broker名称
     private final HashMap<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
+    // broker存活信息，key为broker地址，value为该broker的存活信息
     private final HashMap<String/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
+    // broker地址及对应filter server列表
     private final HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
 
     public RouteInfoManager() {
@@ -118,11 +124,16 @@ public class RouteInfoManager {
             log.error("deleteTopic Exception", e);
         }
     }
-
+    /**
+     * 获取所有topic列表
+     *
+     * @return 包含所有话题的TopicList对象
+     */
     public TopicList getAllTopicList() {
         TopicList topicList = new TopicList();
         try {
             try {
+                // 使用读锁(确保消息发送时的高并发)
                 this.lock.readLock().lockInterruptibly();
                 topicList.getTopicList().addAll(this.topicQueueTable.keySet());
             } finally {
@@ -135,6 +146,19 @@ public class RouteInfoManager {
         return topicList;
     }
 
+    /**
+     * 注册Broker，NameServer主要做服务的注册与发现
+     *
+     * @param clusterName     集群名称
+     * @param brokerAddr      Broker地址
+     * @param brokerName      Broker名称
+     * @param brokerId        Broker的ID
+     * @param haServerAddr    HA服务器的地址
+     * @param topicConfigWrapper 主题配置包装器
+     * @param filterServerList 过滤器服务器列表
+     * @param channel         通信通道
+     * @return 注册Broker的结果
+     */
     public RegisterBrokerResult registerBroker(
             final String clusterName,
             final String brokerAddr,
@@ -147,6 +171,7 @@ public class RouteInfoManager {
         RegisterBrokerResult result = new RegisterBrokerResult();
         try {
             try {
+                // 使用写锁（确保注册信息不会重复，因为里面的map都不是线程安全的，同时决定了还用于写少的场景）
                 this.lock.writeLock().lockInterruptibly();
 
                 Set<String> brokerNames = this.clusterAddrTable.computeIfAbsent(clusterName, k -> new HashSet<>());
@@ -468,13 +493,19 @@ public class RouteInfoManager {
     public int scanNotActiveBroker() {
         int removeCount = 0;
         Iterator<Entry<String, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
+        // 遍历brokerLiveTable
         while (it.hasNext()) {
             Entry<String, BrokerLiveInfo> next = it.next();
+            // 取得最后更新时间
             long last = next.getValue().getLastUpdateTimestamp();
+            // 如果超过120秒则认为Broker断开连接
             if ((last + BROKER_CHANNEL_EXPIRED_TIME) < System.currentTimeMillis()) {
+                // 关闭连接
                 RemotingUtil.closeChannel(next.getValue().getChannel());
+                // 移除Broker
                 it.remove();
                 log.warn("The broker channel expired, {} {}ms", next.getKey(), BROKER_CHANNEL_EXPIRED_TIME);
+                // 进行移除Broker后的相应操作（brokerLiveTable、filterServerTable、brokerAddrTable、clusterAddrTable、topicQueueTable等进行对应移除）
                 this.onChannelDestroy(next.getKey(), next.getValue().getChannel());
 
                 removeCount++;
