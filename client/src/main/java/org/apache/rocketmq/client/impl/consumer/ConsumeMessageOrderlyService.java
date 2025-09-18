@@ -215,6 +215,14 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
         }
     }
 
+    /**
+     * 定期锁定消息队列。
+     *
+     * <p>
+     * 该方法会检查是否已经停止，如果没有停止，则会调用 {@link DefaultMQPushConsumerImpl#getRebalanceImpl()}
+     * 获取消息队列的重平衡实现，然后调用其 {@code lockAll()} 方法锁定所有消息队列。
+     * </p>
+     */
     public synchronized void lockMQPeriodically() {
         if (!this.stopped) {
             this.defaultMQPushConsumerImpl.getRebalanceImpl().lockAll();

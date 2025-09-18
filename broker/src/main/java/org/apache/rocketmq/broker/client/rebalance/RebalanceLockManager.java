@@ -97,11 +97,20 @@ public class RebalanceLockManager {
         return true;
     }
 
+    /**
+     * 判断指定队列是否被锁定
+     *
+     * @param group 分组名称
+     * @param mq 消息队列
+     * @param clientId 客户端ID
+     * @return 如果消息队列被锁定返回true，否则返回false
+     */
     private boolean isLocked(final String group, final MessageQueue mq, final String clientId) {
         ConcurrentHashMap<MessageQueue, LockEntry> groupValue = this.mqLockTable.get(group);
         if (groupValue != null) {
             LockEntry lockEntry = groupValue.get(mq);
             if (lockEntry != null) {
+                // focus
                 boolean locked = lockEntry.isLocked(clientId);
                 if (locked) {
                     lockEntry.setLastUpdateTimestamp(System.currentTimeMillis());
@@ -114,12 +123,21 @@ public class RebalanceLockManager {
         return false;
     }
 
+    /**
+     * 尝试批量锁定消息队列。
+     *
+     * @param group       消息队列所属的组名
+     * @param mqs         需要尝试锁定的消息队列集合
+     * @param clientId    客户端的唯一标识
+     * @return 已成功锁定的消息队列集合
+     */
     public Set<MessageQueue> tryLockBatch(final String group, final Set<MessageQueue> mqs,
         final String clientId) {
         Set<MessageQueue> lockedMqs = new HashSet<MessageQueue>(mqs.size());
         Set<MessageQueue> notLockedMqs = new HashSet<MessageQueue>(mqs.size());
 
         for (MessageQueue mq : mqs) {
+            // focus
             if (this.isLocked(group, mq, clientId)) {
                 lockedMqs.add(mq);
             } else {
@@ -251,11 +269,23 @@ public class RebalanceLockManager {
             this.lastUpdateTimestamp = lastUpdateTimestamp;
         }
 
+        /**
+         * 判断给定的客户端ID是否被锁定。
+         *
+         * @param clientId 客户端ID
+         * @return 如果客户端ID被锁定，则返回true；否则返回false
+         */
         public boolean isLocked(final String clientId) {
             boolean eq = this.clientId.equals(clientId);
+            // focus
             return eq && !this.isExpired();
         }
 
+        /**
+         * 判断当前对象是否已过期。
+         *
+         * @return 如果当前时间距离最后一次更新时间超过 REBALANCE_LOCK_MAX_LIVE_TIME，则返回 true，表示已过期；否则返回 false。
+         */
         public boolean isExpired() {
             boolean expired =
                 (System.currentTimeMillis() - this.lastUpdateTimestamp) > REBALANCE_LOCK_MAX_LIVE_TIME;

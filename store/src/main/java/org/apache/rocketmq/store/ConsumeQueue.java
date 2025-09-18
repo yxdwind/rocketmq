@@ -381,6 +381,12 @@ public class ConsumeQueue {
         return this.minLogicOffset / CQ_STORE_UNIT_SIZE;
     }
 
+    /**
+     * 将消息位置信息包装后放入队列
+     *
+     * @param request 消息请求对象
+     * @param multiQueue 是否为多队列
+     */
     public void putMessagePositionInfoWrapper(DispatchRequest request, boolean multiQueue) {
         final int maxRetries = 30;
         boolean canWrite = this.defaultMessageStore.getRunningFlags().isCQWriteable();
@@ -400,6 +406,7 @@ public class ConsumeQueue {
                         topic, queueId, request.getCommitLogOffset());
                 }
             }
+            // 构建供消费端使用的逻辑队列数据
             boolean result = this.putMessagePositionInfo(request.getCommitLogOffset(),
                 request.getMsgSize(), tagsCode, request.getConsumeQueueOffset());
             if (result) {
@@ -475,6 +482,15 @@ public class ConsumeQueue {
         }
     }
 
+    /**
+     * 将消息位置信息放入消费队列
+     *
+     * @param offset 消息的物理偏移量
+     * @param size   消息的大小
+     * @param tagsCode 消息的标签代码
+     * @param cqOffset 消费队列的偏移量
+     * @return 如果成功将消息位置信息放入消费队列，则返回true；否则返回false
+     */
     private boolean putMessagePositionInfo(final long offset, final int size, final long tagsCode,
         final long cqOffset) {
 
@@ -482,7 +498,7 @@ public class ConsumeQueue {
             log.warn("Maybe try to build consume queue repeatedly maxPhysicOffset={} phyOffset={}", maxPhysicOffset, offset);
             return true;
         }
-
+// 消费队列中写入20个bytes：offset(long)，size(int)，tagscode(long)
         this.byteBufferIndex.flip();
         this.byteBufferIndex.limit(CQ_STORE_UNIT_SIZE);
         this.byteBufferIndex.putLong(offset);
@@ -524,6 +540,7 @@ public class ConsumeQueue {
                 }
             }
             this.maxPhysicOffset = offset + size;
+            // append写入数据
             return mappedFile.appendMessage(this.byteBufferIndex.array());
         }
         return false;

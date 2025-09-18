@@ -140,6 +140,27 @@ public class PullAPIWrapper {
         }
     }
 
+    /**
+     * 从消息队列中拉取内核消息的实现方法。
+     *
+     * @param mq            消息队列对象
+     * @param subExpression 订阅表达式
+     * @param expressionType 表达式类型
+     * @param subVersion     订阅版本
+     * @param offset         消息偏移量
+     * @param maxNums        最大消息数量
+     * @param sysFlag        系统标志
+     * @param commitOffset   提交偏移量
+     * @param brokerSuspendMaxTimeMillis 代理挂起最大时间（毫秒）
+     * @param timeoutMillis  超时时间（毫秒）
+     * @param communicationMode 通信模式
+     * @param pullCallback     拉取回调
+     * @return PullResult 拉取结果
+     * @throws MQClientException MQ客户端异常
+     * @throws RemotingException 远程通信异常
+     * @throws MQBrokerException MQ代理异常
+     * @throws InterruptedException 中断异常
+     */
     public PullResult pullKernelImpl(
         final MessageQueue mq,
         final String subExpression,
