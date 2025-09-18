@@ -493,6 +493,7 @@ public class BrokerController {
                     log.warn("FileWatchService created error, can't load the certificate dynamically");
                 }
             }
+            // 事务
             initialTransaction();
             initialAcl();
             initialRpcHooks();
@@ -512,6 +513,7 @@ public class BrokerController {
             log.warn("Load default discard message hook service: {}", DefaultTransactionalMessageCheckListener.class.getSimpleName());
         }
         this.transactionalMessageCheckListener.setBrokerController(this);
+        // 事务回查 定时任务60S
         this.transactionalMessageCheckService = new TransactionalMessageCheckService(this);
     }
 
@@ -892,6 +894,7 @@ public class BrokerController {
         }
 
         if (!messageStoreConfig.isEnableDLegerCommitLog()) {
+            // 事务
             startProcessorByHa(messageStoreConfig.getBrokerRole());
             handleSlaveSynchronize(messageStoreConfig.getBrokerRole());
             this.registerBrokerAll(true, false, true);
@@ -1233,6 +1236,7 @@ public class BrokerController {
     }
 
     private void startProcessorByHa(BrokerRole role) {
+        // 主节点开启对应的事务状态回查处理器，对PREPARE状态的消息发起事务状态回查请求。
         if (BrokerRole.SLAVE != role) {
             if (this.transactionalMessageCheckService != null) {
                 this.transactionalMessageCheckService.start();
