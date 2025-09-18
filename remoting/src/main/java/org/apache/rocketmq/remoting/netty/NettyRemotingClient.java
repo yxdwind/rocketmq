@@ -375,10 +375,23 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         }
     }
 
+    /**
+     * 同步调用远程命令
+     *
+     * @param addr 远程地址
+     * @param request 发送的请求命令
+     * @param timeoutMillis 超时时间（毫秒）
+     * @return 远程命令的响应结果
+     * @throws InterruptedException 如果当前线程被中断，则抛出此异常
+     * @throws RemotingConnectException 如果连接失败，则抛出此异常
+     * @throws RemotingSendRequestException 如果发送请求失败，则抛出此异常
+     * @throws RemotingTimeoutException 如果请求超时，则抛出此异常
+     */
     @Override
     public RemotingCommand invokeSync(String addr, final RemotingCommand request, long timeoutMillis)
         throws InterruptedException, RemotingConnectException, RemotingSendRequestException, RemotingTimeoutException {
         long beginStartTime = System.currentTimeMillis();
+        // 创建连接
         final Channel channel = this.getAndCreateChannel(addr);
         if (channel != null && channel.isActive()) {
             try {

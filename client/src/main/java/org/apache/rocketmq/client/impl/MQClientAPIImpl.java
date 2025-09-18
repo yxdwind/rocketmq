@@ -409,6 +409,22 @@ public class MQClientAPIImpl {
 
     }
 
+    /**
+     * 发送消息到指定的broker。
+     *
+     * @param addr            目标地址
+     * @param brokerName      broker名称
+     * @param msg             消息对象
+     * @param requestHeader   发送消息请求头
+     * @param timeoutMillis   超时时间（毫秒）
+     * @param communicationMode 通信模式
+     * @param context         发送消息上下文
+     * @param producer        消息生产者实现
+     * @return SendResult     发送结果
+     * @throws RemotingException 远程调用异常
+     * @throws MQBrokerException MQ代理异常
+     * @throws InterruptedException 线程中断异常
+     */
     public SendResult sendMessage(
         final String addr,
         final String brokerName,
@@ -484,6 +500,19 @@ public class MQClientAPIImpl {
         return null;
     }
 
+    /**
+     * 同步发送消息
+     *
+     * @param addr           目标地址
+     * @param brokerName     消息队列名称
+     * @param msg            待发送的消息
+     * @param timeoutMillis  超时时间（毫秒）
+     * @param request        请求命令
+     * @return SendResult 发送结果
+     * @throws RemotingException         远程通信异常
+     * @throws MQBrokerException         消息队列代理异常
+     * @throws InterruptedException      线程中断异常
+     */
     private SendResult sendMessageSync(
         final String addr,
         final String brokerName,

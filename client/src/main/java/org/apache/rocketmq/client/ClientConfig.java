@@ -72,6 +72,13 @@ public class ClientConfig {
      */
     protected boolean enableStreamRequestType = false;
 
+    /**
+     * 构建MQ客户端ID。
+     *
+     * 规则：IP@instanceName@unitName@streamRequestType
+     *
+     * @return 构建好的MQ客户端ID字符串。
+     */
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
         sb.append(this.getClientIP());

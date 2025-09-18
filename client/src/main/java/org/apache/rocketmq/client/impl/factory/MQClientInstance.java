@@ -232,13 +232,15 @@ public class MQClientInstance {
                     if (null == this.clientConfig.getNamesrvAddr()) {
                         this.mQClientAPIImpl.fetchNameServerAddr();
                     }
+                    // 开启消息发送服务 NRC
                     // Start request-response channel
                     this.mQClientAPIImpl.start();
+                    // 开启定时任务
                     // Start various schedule tasks
                     this.startScheduledTask();
-                    // Start pull service
+                    // Start pull service 消费者：线程
                     this.pullMessageService.start();
-                    // Start rebalance service
+                    // Start rebalance service 消费者：线程
                     this.rebalanceService.start();
                     // Start push service
                     this.defaultMQProducer.getDefaultMQProducerImpl().start(false);
@@ -253,8 +255,20 @@ public class MQClientInstance {
         }
     }
 
+    /**
+     * 启动定时任务，生产者或消费者不是实时感知Broker的状态，而是一定有一定的偏差
+     * 如果出现宕机，生产者或消费者要自行处理故障
+     *
+     * 该方法启动多个定时任务，包括：
+     * 1. 定时获取NameServer地址
+     * 2. 定时从NameServer更新Topic路由信息
+     * 3. 定时清理离线的Broker并发送心跳包给所有Broker
+     * 4. 定时持久化所有消费者的偏移量
+     * 5. 定时调整线程池大小
+     */
     private void startScheduledTask() {
         if (null == this.clientConfig.getNamesrvAddr()) {
+            // 两次获取一次路由地址
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
                 @Override
@@ -267,7 +281,7 @@ public class MQClientInstance {
                 }
             }, 1000 * 10, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
         }
-
+// 30s一次修改路由信息
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -279,7 +293,7 @@ public class MQClientInstance {
                 }
             }
         }, 10, this.clientConfig.getPollNameServerInterval(), TimeUnit.MILLISECONDS);
-
+// 30s一次心跳
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -292,7 +306,7 @@ public class MQClientInstance {
                 }
             }
         }, 1000, this.clientConfig.getHeartbeatBrokerInterval(), TimeUnit.MILLISECONDS);
-
+// 5s定时任务，持久化消费进度
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override

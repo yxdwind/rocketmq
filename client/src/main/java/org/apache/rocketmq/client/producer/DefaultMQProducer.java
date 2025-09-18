@@ -278,6 +278,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public void start() throws MQClientException {
         this.setProducerGroup(withNamespace(this.producerGroup));
+        // 启动核心流程
         this.defaultMQProducerImpl.start();
         if (null != traceDispatcher) {
             try {

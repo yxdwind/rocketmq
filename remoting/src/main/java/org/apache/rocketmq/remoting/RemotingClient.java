@@ -31,6 +31,18 @@ public interface RemotingClient extends RemotingService {
 
     List<String> getNameServerAddressList();
 
+    /**
+     * 同步调用远程命令
+     *
+     * @param addr 目标地址
+     * @param request 请求命令
+     * @param timeoutMillis 超时时间（毫秒）
+     * @return 响应命令
+     * @throws InterruptedException 如果当前线程在等待时被中断，则抛出此异常
+     * @throws RemotingConnectException 如果连接远程服务失败，则抛出此异常
+     * @throws RemotingSendRequestException 如果发送请求命令失败，则抛出此异常
+     * @throws RemotingTimeoutException 如果请求超时，则抛出此异常
+     */
     RemotingCommand invokeSync(final String addr, final RemotingCommand request,
         final long timeoutMillis) throws InterruptedException, RemotingConnectException,
         RemotingSendRequestException, RemotingTimeoutException;
