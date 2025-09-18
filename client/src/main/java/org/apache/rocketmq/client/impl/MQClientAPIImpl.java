@@ -1121,6 +1121,16 @@ public class MQClientAPIImpl {
         throw new MQBrokerException(response.getCode(), response.getRemark(), addr);
     }
 
+    /**
+     * 单向结束事务
+     *
+     * @param addr 目标地址
+     * @param requestHeader 请求头信息
+     * @param remark 备注信息
+     * @param timeoutMillis 超时时间（毫秒）
+     * @throws RemotingException 如果发生远程通信异常，抛出此异常
+     * @throws InterruptedException 如果线程被中断，抛出此异常
+     */
     public void endTransactionOneway(
             final String addr,
             final EndTransactionRequestHeader requestHeader,

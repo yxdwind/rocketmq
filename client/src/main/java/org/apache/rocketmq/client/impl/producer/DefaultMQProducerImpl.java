@@ -1246,9 +1246,19 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         }
     }
 
+    /**
+     * 在事务中发送消息
+     *
+     * @param msg                   要发送的消息
+     * @param localTransactionExecuter 本地事务执行器
+     * @param arg                   传递给本地事务执行器的参数
+     * @return TransactionSendResult 事务发送结果
+     * @throws MQClientException 如果发生客户端异常，则抛出该异常
+     */
     public TransactionSendResult sendMessageInTransaction(final Message msg,
                                                           final LocalTransactionExecuter localTransactionExecuter, final Object arg)
             throws MQClientException {
+        // prepare
         TransactionListener transactionListener = getCheckListener();
         if (null == localTransactionExecuter && null == transactionListener) {
             throw new MQClientException("tranExecutor is null", null);
@@ -1262,9 +1272,11 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         Validators.checkMessage(msg, this.defaultMQProducer);
 
         SendResult sendResult = null;
+        // 事务消息的标识
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TRANSACTION_PREPARED, "true");
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_PRODUCER_GROUP, this.defaultMQProducer.getProducerGroup());
         try {
+            // sync
             sendResult = this.send(msg);
         } catch (Exception e) {
             throw new MQClientException("send message Exception", e);
@@ -1313,6 +1325,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         }
 
         try {
+            // focus
             this.endTransaction(msg, sendResult, localTransactionState, localException);
         } catch (Exception e) {
             log.warn("local transaction execute " + localTransactionState + ", but end broker transaction failed", e);
@@ -1336,6 +1349,18 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         return send(msg, this.defaultMQProducer.getSendMsgTimeout());
     }
 
+    /**
+     * 结束事务消息。
+     *
+     * @param msg 消息对象
+     * @param sendResult 发送结果
+     * @param localTransactionState 本地事务状态
+     * @param localException 本地事务执行时发生的异常
+     * @throws RemotingException 网络异常
+     * @throws MQBrokerException MQ代理异常
+     * @throws InterruptedException 中断异常
+     * @throws UnknownHostException 未知主机异常
+     */
     public void endTransaction(
             final Message msg,
             final SendResult sendResult,

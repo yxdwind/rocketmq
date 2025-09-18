@@ -83,6 +83,14 @@ public class TransactionMQProducer extends DefaultMQProducer {
         return this.defaultMQProducerImpl.sendMessageInTransaction(msg, tranExecuter, arg);
     }
 
+    /**
+     * 在事务中发送消息
+     *
+     * @param msg 要发送的消息对象
+     * @param arg 传递给事务监听器的附加参数
+     * @return 事务发送结果
+     * @throws MQClientException 如果事务监听器为空，则抛出异常
+     */
     @Override
     public TransactionSendResult sendMessageInTransaction(final Message msg,
         final Object arg) throws MQClientException {
@@ -91,6 +99,7 @@ public class TransactionMQProducer extends DefaultMQProducer {
         }
 
         msg.setTopic(NamespaceUtil.wrapNamespace(this.getNamespace(), msg.getTopic()));
+        // focus
         return this.defaultMQProducerImpl.sendMessageInTransaction(msg, null, arg);
     }
 

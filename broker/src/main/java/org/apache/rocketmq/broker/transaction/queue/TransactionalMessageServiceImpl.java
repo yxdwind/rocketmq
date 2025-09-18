@@ -60,6 +60,12 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
 
     private ConcurrentHashMap<MessageQueue, MessageQueue> opQueueMap = new ConcurrentHashMap<>();
 
+    /**
+     * 异步准备消息
+     *
+     * @param messageInner 内部消息对象
+     * @return 返回一个包含消息处理结果的CompletableFuture对象
+     */
     @Override
     public CompletableFuture<PutMessageResult> asyncPrepareMessage(MessageExtBrokerInner messageInner) {
         return transactionalMessageBridge.asyncPutHalfMessage(messageInner);
@@ -452,8 +458,15 @@ public class TransactionalMessageServiceImpl implements TransactionalMessageServ
         return getResult;
     }
 
+    /**
+     * 根据偏移量获取半消息
+     *
+     * @param commitLogOffset 提交日志偏移量
+     * @return OperationResult 包含操作结果的响应对象
+     */
     private OperationResult getHalfMessageByOffset(long commitLogOffset) {
         OperationResult response = new OperationResult();
+        // 获取事务消息对应的commitLog消息封装的MessageExt
         MessageExt messageExt = this.transactionalMessageBridge.lookMessageByOffset(commitLogOffset);
         if (messageExt != null) {
             response.setPrepareMessage(messageExt);
