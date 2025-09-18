@@ -69,6 +69,14 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor {
         super(brokerController);
     }
 
+    /**
+     * 处理写入流程
+     *
+     * @param ctx       ChannelHandlerContext对象，表示一个通道处理器上下文
+     * @param request   RemotingCommand对象，表示接收到的请求命令
+     * @return          RemotingCommand对象，表示处理后的响应命令
+     * @throws RemotingCommandException 如果处理请求过程中出现异常，则抛出该异常
+     */
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx,
                                           RemotingCommand request) throws RemotingCommandException {
@@ -86,6 +94,14 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor {
         asyncProcessRequest(ctx, request).thenAcceptAsync(responseCallback::callback, this.brokerController.getPutMessageFutureExecutor());
     }
 
+    /**
+     * 异步处理请求
+     *
+     * @param ctx 通道处理器上下文
+     * @param request 请求命令
+     * @return 一个包含处理结果的 CompletableFuture 对象
+     * @throws RemotingCommandException 如果请求命令处理过程中出现异常，则抛出该异常
+     */
     public CompletableFuture<RemotingCommand> asyncProcessRequest(ChannelHandlerContext ctx,
                                                                   RemotingCommand request) throws RemotingCommandException {
         final SendMessageContext mqtraceContext;
@@ -263,6 +279,15 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor {
     }
 
 
+    /**
+     * 异步发送消息的方法。
+     *
+     * @param ctx 当前的ChannelHandlerContext
+     * @param request 请求的RemotingCommand对象
+     * @param mqtraceContext 发送消息的上下文信息
+     * @param requestHeader 发送消息的请求头
+     * @return 一个CompletableFuture对象，表示异步发送消息的结果
+     */
     private CompletableFuture<RemotingCommand> asyncSendMessage(ChannelHandlerContext ctx, RemotingCommand request,
                                                                 SendMessageContext mqtraceContext,
                                                                 SendMessageRequestHeader requestHeader) {

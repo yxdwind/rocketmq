@@ -128,6 +128,15 @@ public class DefaultMessageStore implements MessageStore {
     private final ScheduledExecutorService diskCheckScheduledExecutorService =
             Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl("DiskCheckScheduledThread"));
 
+    /**
+     * 构造函数
+     *
+     * @param messageStoreConfig 消息存储配置
+     * @param brokerStatsManager 代理统计管理器
+     * @param messageArrivingListener 消息到达监听器
+     * @param brokerConfig 代理配置
+     * @throws IOException 如果发生IO异常
+     */
     public DefaultMessageStore(final MessageStoreConfig messageStoreConfig, final BrokerStatsManager brokerStatsManager,
         final MessageArrivingListener messageArrivingListener, final BrokerConfig brokerConfig) throws IOException {
         this.messageArrivingListener = messageArrivingListener;
@@ -157,7 +166,7 @@ public class DefaultMessageStore implements MessageStore {
         this.scheduleMessageService = new ScheduleMessageService(this);
 
         this.transientStorePool = new TransientStorePool(messageStoreConfig);
-
+        // 开启堆外内存缓冲区
         if (messageStoreConfig.isTransientStorePoolEnable()) {
             this.transientStorePool.init();
         }
@@ -444,6 +453,12 @@ public class DefaultMessageStore implements MessageStore {
         return false;
     }
 
+    /**
+     * 异步发送消息
+     *
+     * @param msg 消息对象
+     * @return 包含消息发送结果的CompletableFuture对象
+     */
     @Override
     public CompletableFuture<PutMessageResult> asyncPutMessage(MessageExtBrokerInner msg) {
         PutMessageStatus checkStoreStatus = this.checkStoreStatus();
@@ -463,7 +478,8 @@ public class DefaultMessageStore implements MessageStore {
 
 
         long beginTime = this.getSystemClock().now();
-        CompletableFuture<PutMessageResult> putResultFuture = this.commitLog.asyncPutMessage(msg);
+        // 调用commitLog的异步发送消息方法
+        CompletableFuture<PutMessageResult> putResultFuture = this.commitLog.asyncPutMessage(msg);    
 
         putResultFuture.thenAccept(result -> {
             long elapsedTime = this.getSystemClock().now() - beginTime;

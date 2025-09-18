@@ -97,11 +97,12 @@ public class CommitLog {
         this.defaultMessageStore = defaultMessageStore;
 
         if (FlushDiskType.SYNC_FLUSH == defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) {
+            // 同步刷盘
             this.flushCommitLogService = new GroupCommitService();
         } else {
+            //  异步刷盘，FlushRealTimeService线程默认每500ms将MappedByteBuffer中新追加的内容刷写到磁盘
             this.flushCommitLogService = new FlushRealTimeService();
         }
-
         this.commitLogService = new CommitRealTimeService();
 
         this.appendMessageCallback = new DefaultAppendMessageCallback();
@@ -142,7 +143,7 @@ public class CommitLog {
         flushDiskWatcher.setDaemon(true);
         flushDiskWatcher.start();
 
-
+        // 堆外内存
         if (defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
             this.commitLogService.start();
         }
@@ -614,6 +615,12 @@ public class CommitLog {
         }
     }
 
+    /**
+     * 异步发送消息
+     *
+     * @param msg 消息对象
+     * @return 发送结果
+     */
     public CompletableFuture<PutMessageResult> asyncPutMessage(final MessageExtBrokerInner msg) {
         // Set the storage time
         msg.setStoreTimestamp(System.currentTimeMillis());
@@ -673,6 +680,8 @@ public class CommitLog {
         long elapsedTimeInLock = 0;
         MappedFile unlockMappedFile = null;
 
+        // 多个线程并行处理需要上锁
+        // RocketMQ 官方文档优化建议：异步刷盘建议使用自旋锁，同步刷盘建议使用重入锁，调整Broker配置项useReentrantLockWhenPutMessage，默认为false；
         putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
         try {
             MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
@@ -801,7 +810,7 @@ public class CommitLog {
                 log.error("Create mapped file1 error, topic: {} clientAddr: {}", messageExtBatch.getTopic(), messageExtBatch.getBornHostString());
                 return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, null));
             }
-
+            // 把Broker内部Message追加到MappedFile中（这个时候还没有刷盘）
             result = mappedFile.appendMessages(messageExtBatch, this.appendMessageCallback, putMessageContext);
             switch (result.getStatus()) {
                 case PUT_OK:
@@ -1032,7 +1041,7 @@ public class CommitLog {
     abstract class FlushCommitLogService extends ServiceThread {
         protected static final int RETRY_TIMES_OVER = 10;
     }
-
+    // 异步刷盘
     class CommitRealTimeService extends FlushCommitLogService {
 
         private long lastCommitTimestamp = 0;
@@ -1046,20 +1055,23 @@ public class CommitLog {
         public void run() {
             CommitLog.log.info(this.getServiceName() + " service started");
             while (!this.isStopped()) {
+                // 间隔时间，默认为200ms
                 int interval = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitIntervalCommitLog();
-
+                // 一次提交的至少页数
                 int commitDataLeastPages = CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitCommitLogLeastPages();
-
+                // 两次真实提交的最大间隔，默认为200ms
                 int commitDataThoroughInterval =
                     CommitLog.this.defaultMessageStore.getMessageStoreConfig().getCommitCommitLogThoroughInterval();
 
                 long begin = System.currentTimeMillis();
+                // 上次提交间隔超过commitDataThoroughInterval，则忽略commitDataThoroughInterval直接提交
                 if (begin >= (this.lastCommitTimestamp + commitDataThoroughInterval)) {
                     this.lastCommitTimestamp = begin;
                     commitDataLeastPages = 0;
                 }
 
                 try {
+                    // 执行提交操作，将待提交数据提交到物理文件的内存映射区
                     boolean result = CommitLog.this.mappedFileQueue.commit(commitDataLeastPages);
                     long end = System.currentTimeMillis();
                     if (!result) {
@@ -1306,6 +1318,16 @@ public class CommitLog {
             this.msgStoreItemMemory = ByteBuffer.allocate(END_FILE_MIN_BLANK_LENGTH);
         }
 
+        /**
+         * 将消息追加到CommitLog中。
+         *
+         * @param fileFromOffset  文件起始偏移量
+         * @param byteBuffer      消息缓冲区
+         * @param maxBlank        最大空白空间
+         * @param msgInner         消息扩展对象
+         * @param putMessageContext 消息上下文
+         * @return AppendMessageResult 追加消息的结果
+         */
         public AppendMessageResult doAppend(final long fileFromOffset, final ByteBuffer byteBuffer, final int maxBlank,
             final MessageExtBrokerInner msgInner, PutMessageContext putMessageContext) {
             // STORETIMESTAMP + STOREHOSTADDRESS + OFFSET <br>

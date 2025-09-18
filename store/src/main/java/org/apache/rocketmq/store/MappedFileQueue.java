@@ -436,6 +436,12 @@ public class MappedFileQueue {
         return deleteCount;
     }
 
+    /**
+     * 刷新文件缓存中的数据到磁盘。
+     *
+     * @param flushLeastPages 至少需要刷新的页数，0表示刷新所有缓存数据
+     * @return 如果刷新成功，返回true；否则返回false
+     */
     public boolean flush(final int flushLeastPages) {
         boolean result = true;
         MappedFile mappedFile = this.findMappedFileByOffset(this.flushedWhere, this.flushedWhere == 0);
@@ -453,6 +459,12 @@ public class MappedFileQueue {
         return result;
     }
 
+    /**
+     * 提交数据
+     *
+     * @param commitLeastPages 至少提交的页数
+     * @return 提交成功返回true，否则返回false
+     */
     public boolean commit(final int commitLeastPages) {
         boolean result = true;
         MappedFile mappedFile = this.findMappedFileByOffset(this.committedWhere, this.committedWhere == 0);
