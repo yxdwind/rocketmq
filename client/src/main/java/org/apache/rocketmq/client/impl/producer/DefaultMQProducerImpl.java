@@ -311,6 +311,13 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         return null;
     }
 
+    /**
+     * 检查事务消息的状态。
+     *
+     * @param addr broker的地址
+     * @param msg  消息对象
+     * @param header 请求头对象
+     */
     @Override
     public void checkTransactionState(final String addr, final MessageExt msg,
                                       final CheckTransactionStateRequestHeader header) {
@@ -350,6 +357,13 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 }
             }
 
+            /**
+             * 处理事务状态
+             *
+             * @param localTransactionState 事务状态
+             * @param producerGroup 生产者组
+             * @param exception 异常
+             */
             private void processTransactionState(
                     final LocalTransactionState localTransactionState,
                     final String producerGroup,

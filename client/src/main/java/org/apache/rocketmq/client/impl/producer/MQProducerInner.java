@@ -30,6 +30,13 @@ public interface MQProducerInner {
     TransactionCheckListener checkListener();
     TransactionListener getCheckListener();
 
+    /**
+     * 检查交易状态
+     *
+     * @param addr 地址
+     * @param msg 消息对象
+     * @param checkRequestHeader 检查交易状态请求头
+     */
     void checkTransactionState(
         final String addr,
         final MessageExt msg,
